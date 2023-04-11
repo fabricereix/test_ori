@@ -9,7 +9,7 @@ concurrency: accept-pull-request-${{ github.event.issue.number }}
 
 jobs:
   accept-pull-request:
-    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, "/accept") }}
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '/accept') }}
     env:
       GITHUB_CONTEXT: ${{ toJson(github) }}    
       GITHUB_TOKEN: ${{ secrets.HURL_BOT_TOKEN }}
