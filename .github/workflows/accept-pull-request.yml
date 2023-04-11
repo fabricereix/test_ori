@@ -9,7 +9,7 @@ concurrency: accept-pull-request-${{ github.event.issue.number }}
 
 jobs:
   accept-pull-request:
-    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '/accept') }}
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '\/accept') }}
     env:
       GITHUB_CONTEXT: ${{ toJson(github) }}    
       GITHUB_TOKEN: ${{ secrets.HURL_BOT_TOKEN }}
@@ -189,7 +189,7 @@ jobs:
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"  
             fi
-            git switch origin/${{ env.BASE_REF }}
+            git switch HEAD
           fi
 
       - name: Check if pull request checks are successful
@@ -199,7 +199,7 @@ jobs:
           if [ "${exit_code}" -eq 0 ] ; then
             echo "  - ✅ Pull request checks are successful."
           else
-            comment="❌ Some checks are still failing, please fix them before trying to /accept this pull request."
+            comment="❌ Some checks are still failing, please fix them before trying to re-accept this pull request."
             echo "  - ${comment}"
             gh pr comment "${PR_NUMBER}" --body "${comment}"
             exit 1
