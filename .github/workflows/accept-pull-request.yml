@@ -189,7 +189,7 @@ jobs:
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"  
             fi
-            git switch ${{ env.HEAD_REF }}
+            git switch ${{ env.BASE_REF }}
           fi
 
       - name: Check if pull request checks are successful
