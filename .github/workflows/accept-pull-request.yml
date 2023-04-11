@@ -57,9 +57,19 @@ jobs:
           ref: ${{ env.BASE_REF }}
           fetch-depth: 0
 
+      - name: Init git bot context
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.HURL_BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.HURL_BOT_GPG_PRIVATE_KEY_PASSPHRASE }}
+          git_committer_name: "hurl-bot"
+          git_committer_email: "bot@hurl.dev"
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
       - name: Notify user
         run: |
-          order="${{ github.event.comment.body }}"
+          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
           comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
           gh pr comment "${PR_NUMBER}" --body "${comment}"
 
@@ -128,7 +138,7 @@ jobs:
               comment="✅ Github release ${tag_version}  is published."
               echo "  - ${comment}"
             else
-              comment="⚠ Github release ${tag_version} is still in draft/prerelease. Please don't forget to publish it after merging this release PR."
+              comment="👁‍🗨 Github release ${tag_version} is still in draft/prerelease. Please don't forget to publish it after merging this release PR."
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"
             fi
@@ -154,12 +164,12 @@ jobs:
           if [ ${diff_count} -eq 0 ] ; then
             echo "  - ✅ ${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }} is already rebased from ${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}."
           else
-            comment="🔨 You have to rebase your \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+            comment="🕗 This \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch needs a rebase because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
             echo "  - ${comment}"
             gh pr comment "${PR_NUMBER}" --body "${comment}"
-            git switch origin/${{ env.BASE_REF }}
+            
+            git switch ${{ env.HEAD_TYPE }}/${{ env.HEAD_REF }}
             git pull
-            git switch ${{ env.HEAD_REF }}
             git rebase origin/${{ env.BASE_REF }} && exit_code=0 || exit_code=1
             if [ ${exit_code} -eq 1 ] ; then
               comment="❌ Auto rebase from \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` fails due to conflicts. Sorry but you have to manage this manually. Please refer to ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} logs."
@@ -178,10 +188,7 @@ jobs:
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"  
             fi
-            comment="❌ You have to rebase your \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
-            echo "  - ${comment}"
-            gh pr comment "${PR_NUMBER}" --body "${comment}" 
-            exit 1
+            git switch origin/${{ env.BASE_REF }}
           fi
 
       - name: Check if pull request checks are successful
@@ -219,16 +226,6 @@ jobs:
       - name: Get new commits list
         run: |
           git log --oneline --cherry origin/${{ env.BASE_REF }}...${{ env.HEAD_TYPE }}/${{ env.HEAD_REF }} | tee ${{ env.NEW_COMMITS_FILE }}
-
-      - name: Init git bot context
-        uses: crazy-max/ghaction-import-gpg@v5
-        with:
-          gpg_private_key: ${{ secrets.HURL_BOT_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.HURL_BOT_GPG_PRIVATE_KEY_PASSPHRASE }}
-          git_committer_name: "hurl-bot"
-          git_committer_email: "bot@hurl.dev"
-          git_user_signingkey: true
-          git_commit_gpgsign: true
 
       - name: Merge fast forward head ref to base ref 
         run: |
