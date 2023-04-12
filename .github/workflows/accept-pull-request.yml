@@ -166,7 +166,7 @@ jobs:
             echo "  - ✅ ${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }} is already rebased from ${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}."
           else
             if [ ${{ env.HEAD_TYPE }} == "fork" ] ; then
-              comment="❌ You have to rebase \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch (sorry i can't auto-rebase from a fork):<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              comment="❌ You have to rebase \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch (sorry i can't auto rebase from a fork):<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"              
               exit 1
