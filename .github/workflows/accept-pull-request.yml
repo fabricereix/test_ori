@@ -51,18 +51,18 @@ jobs:
           echo "NEW_COMMITS_FILE=new_commits.txt" | tee -a "${GITHUB_ENV}"
           echo "base_ref=$(jq -rc .base.ref ${pr_detail_file})" | tee -a "${GITHUB_OUTPUT}"
 
-      - name: Notify user
-        run: |
-          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
-          comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
-          gh pr comment "${PR_NUMBER}" --body "${comment}"
-
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{ env.BASE_REF }}
           token: ${{ secrets.HURL_BOT_TOKEN }}
           fetch-depth: 0
+
+      - name: Notify user
+        run: |
+          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
+          comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
+          gh pr comment "${PR_NUMBER}" --body "${comment}"
 
       - name: Init git bot context
         uses: crazy-max/ghaction-import-gpg@v5
