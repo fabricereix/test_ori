@@ -60,7 +60,7 @@ jobs:
 
       - name: Notify user
         run: |
-          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
+          order="${{ github.event.comment.body }}"
           comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
           gh pr comment "${PR_NUMBER}" --body "${comment}"
 
@@ -224,12 +224,12 @@ jobs:
             echo "  - ✅ ${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }} is already rebased from ${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}."
           else
             if [ ${{ env.HEAD_TYPE }} == "fork" ] ; then
-              comment="❌ New commits have been pushed to \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` since you `/accept` this PR. You have to rebase \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because i can not auto rebase from a fork.<br>Pending commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              comment="❌ New commits have been pushed to \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` since you accept this PR. You have to rebase \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch by yourself because i can't auto rebase from a fork.<br>Pending commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"              
               exit 1
             else
-              comment="❌ New commits have been pushed to \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` since you `/accept` this PR. You can rebase it yourself or re-accept this PR to execute an auto rebase.<br>Pending commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              comment="❌ New commits have been pushed to \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` since you accept this PR. You can rebase it by yourself or simply re-accept this PR to execute an auto rebase.<br>Pending commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"
               exit 1
