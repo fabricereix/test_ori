@@ -51,6 +51,12 @@ jobs:
           echo "NEW_COMMITS_FILE=new_commits.txt" | tee -a "${GITHUB_ENV}"
           echo "base_ref=$(jq -rc .base.ref ${pr_detail_file})" | tee -a "${GITHUB_OUTPUT}"
 
+      - name: Notify user
+        run: |
+          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
+          comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
+          gh pr comment "${PR_NUMBER}" --body "${comment}"
+
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -68,11 +74,12 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - name: Notify user
+      - name: Add fork source branch
+        if: env.HEAD_TYPE == 'fork'
         run: |
-          order=$(echo "${{ github.event.comment.body }}" | tr -d '/')
-          comment="🕗 [${order}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) is running, please wait for completion."
-          gh pr comment "${PR_NUMBER}" --body "${comment}"
+          git remote add fork https://github.com/${{ env.HEAD_REPO_FULL_NAME}}
+          git remote --verbose
+          git fetch --all
 
       - name: Check comment user permission
         run: |
@@ -145,13 +152,6 @@ jobs:
             fi
           fi
 
-      - name: Add fork source branch
-        if: env.HEAD_TYPE == 'fork'
-        run: |
-          git remote add fork https://github.com/${{ env.HEAD_REPO_FULL_NAME}}
-          git remote --verbose
-          git fetch --all
-
       - name: Check if source branch is rebased from target branch 
         run: |
           git log --oneline --cherry ${{ env.HEAD_TYPE }}/${{ env.HEAD_REF }}...origin/${{ env.BASE_REF }} > "${{ env.REMAINING_COMMITS_FILE }}" && exit_code=0 || exit_code=1
@@ -165,9 +165,12 @@ jobs:
           if [ ${diff_count} -eq 0 ] ; then
             echo "  - ✅ ${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }} is already rebased from ${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}."
           else
-            comment="🕗 This \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch needs a rebase because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
-            echo "  - ${comment}"
-            gh pr comment "${PR_NUMBER}" --body "${comment}"
+            if [ ${{ env.HEAD_TYPE }} == "fork" ] ; then
+              comment="❌ You have to rebase your \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch (can not auto-rebase from a fork):<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              echo "  - ${comment}"
+              gh pr comment "${PR_NUMBER}" --body "${comment}"              
+              exit 1
+            fi
             git fetch
             git checkout ${{ env.HEAD_TYPE }}/${{ env.HEAD_REF }}
             git switch ${{ env.HEAD_REF }}
@@ -181,7 +184,7 @@ jobs:
             fi
             git push --force && exit_code=0 || exit_code=1
             if [ ${exit_code} -eq 0 ] ; then
-              comment="✅ Auto rebase from \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` succeeds."
+              comment="✅ Auto rebase from \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` succeeds, \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` now embeds these commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
               echo "  - ${comment}"
               gh pr comment "${PR_NUMBER}" --body "${comment}"
               sleep 15
@@ -219,10 +222,17 @@ jobs:
           if [ ${diff_count} -eq 0 ] ; then
             echo "  - ✅ ${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }} is already rebased from ${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}."
           else
-            comment="❌ You have to rebase your \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
-            echo "  - ${comment}"
-            gh pr comment "${PR_NUMBER}" --body "${comment}"
-            exit 1
+            if [ ${{ env.HEAD_TYPE }} == "fork" ] ; then
+              comment="❌ You have to rebase your \`${{ env.HEAD_REPO_FULL_NAME}}/${{ env.HEAD_REF }}\` branch first because there are new commits pending on target \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` branch (can not auto-rebase from a fork):<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              echo "  - ${comment}"
+              gh pr comment "${PR_NUMBER}" --body "${comment}"              
+              exit 1
+            else
+              comment="❌ New commits have been pushed to \`${{ env.BASE_REPO_FULL_NAME}}/${{ env.BASE_REF }}\` since you `/accept` this PR. You can rebase it yourself or re-accept this pr to execute an auto rebase.<br>Pending commits:<br>$(echo ; sed "s/+/-/g" ${{ env.REMAINING_COMMITS_FILE }})"
+              echo "  - ${comment}"
+              gh pr comment "${PR_NUMBER}" --body "${comment}"
+              exit 1
+            fi
           fi
 
       - name: Get new commits list
