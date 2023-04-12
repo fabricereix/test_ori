@@ -211,6 +211,7 @@ jobs:
 
       - name: Check if source branch is rebased from target branch 
         run: |
+          git pull
           git log --oneline --cherry ${{ env.HEAD_TYPE }}/${{ env.HEAD_REF }}...origin/${{ env.BASE_REF }} > "${{ env.REMAINING_COMMITS_FILE }}" && exit_code=0 || exit_code=1
           if [ ${exit_code} -eq 1 ] ; then
             comment="❌ Rebase check fails. Please refer to ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} logs."
